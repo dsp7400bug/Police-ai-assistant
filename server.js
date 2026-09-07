@@ -71,7 +71,7 @@ app.post('/api/chat', async (req, res) => {
         const { messages } = req.body;
 
         const response = await ai.models.generateContent({
-            model: 'gemini-3.8-flash',
+            model: 'gemini-3.7-flash',
             contents: messages,
             config: {
                 systemInstruction: SYSTEM_PROMPT
@@ -153,7 +153,7 @@ TASK:
 `;
 
         const response = await ai.models.generateContent({
-            model: 'gemini-3.8-flash',
+            model: 'gemini-3.7-flash',
             contents: prompt,
             config: {
                 systemInstruction: SYSTEM_PROMPT
