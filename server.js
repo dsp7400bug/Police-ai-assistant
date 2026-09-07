@@ -56,7 +56,7 @@ app.post('/api/chat', async (req, res) => {
     try {
         const { messages } = req.body;
         const model = genAI.getGenerativeModel({ 
-            model: "gemini-1.5-flash", 
+            model: "gemini-3.5-flash", 
             systemInstruction: SYSTEM_PROMPT 
         });
 
@@ -79,7 +79,7 @@ app.post('/api/generate', async (req, res) => {
         const { history } = req.body;
         // Use Pro model for higher precision drafting
         const model = genAI.getGenerativeModel({ 
-            model: "gemini-1.5-pro", 
+            model: "gemini-3.5-flash", 
             systemInstruction: SYSTEM_PROMPT 
         });
 
