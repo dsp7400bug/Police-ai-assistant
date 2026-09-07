@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Police AI Assistant - AI-Powered Police Drafting Assistant</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-wrapper">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="brand-container">
+                <div class="logo-icon">🛡️</div>
+                <div class="brand-text">
+                    <h1 class="main-title">Police AI Assistant</h1>
+                    <p class="tagline">AI-Powered Police Drafting Assistant</p>
+                </div>
+            </div>
+
+            <nav class="module-nav">
+                <button class="nav-item active" onclick="setMode('FIR')">
+                    <i class="fas fa-file-signature"></i> FIR / Complaint
+                </button>
+                <button class="nav-item" onclick="setMode('KHATMA')">
+                    <i class="fas fa-archive"></i> खात्मा / खारिजी
+                </button>
+                <button class="nav-item" onclick="setMode('CHARGE')">
+                    <i class="fas fa-balance-scale"></i> चालान / Charge-sheet
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <button class="reset-btn" onclick="resetCase()">
+                    <i class="fas fa-plus"></i> New Case / Clear
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Application Area -->
+        <main class="content">
+            <!-- Left: Chat & Fact Collection -->
+            <div class="chat-panel">
+                <div class="panel-header">
+                    <span><i class="fas fa-comments"></i> Case Conversation</span>
+                    <span id="connection-status" class="status-dot online"></span>
+                </div>
+                <div id="chat-window">
+                    <!-- AI messages will appear here -->
+                </div>
+                <div class="input-container">
+                    <button id="mic-btn" class="ctrl-btn" title="Voice Input">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                    <textarea id="user-input" placeholder="घटना का विवरण यहाँ लिखें या बोलें..."></textarea>
+                    <button id="send-btn" class="primary-btn">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right: Document Preview & Analysis -->
+            <div class="result-panel">
+                <div class="panel-header">
+                    <span><i class="fas fa-file-alt"></i> Drafted Document</span>
+                    <button id="generate-btn" onclick="generateDraft()" class="gen-btn">
+                        <i class="fas fa-magic"></i> Generate Draft
+                    </button>
+                </div>
+
+                <!-- Loading State -->
+                <div id="loader" class="hidden">
+                    <div class="spinner"></div>
+                    <p>Drafting official document according to BNS/BNSS/BSA guidelines...</p>
+                </div>
+
+                <!-- Final Output Display -->
+                <div id="output-area" class="paper-container hidden">
+                    <div id="draft-text" class="printable-content">
+                        <!-- Final FIR Draft & Legal Analysis injected here -->
+                    </div>
+                    <div class="document-actions">
+                        <button class="doc-btn copy" onclick="copyDraft()">
+                            <i class="fas fa-copy"></i> Copy Draft
+                        </button>
+                        <button class="doc-btn print" onclick="window.print()">
+                            <i class="fas fa-print"></i> Print / PDF
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Empty State -->
+                <div id="empty-state" class="empty-state-view">
+                    <i class="fas fa-file-invoice"></i>
+                    <p>तथ्यों को एकत्रित करने के लिए बातचीत शुरू करें, फिर ड्राफ्ट जनरेट करें।</p>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
