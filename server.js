@@ -188,9 +188,9 @@ app.post('/api/chat', async (req, res) => {
         const { messages, caseFacts = {} } = req.body;
 
         const response = await generateWithFallback(
-    messages,
-    {
-        systemInstruction: SYSTEM_PROMPT + `
+            messages,
+            {
+                systemInstruction: SYSTEM_PROMPT + `
 
 CURRENT CASE FACTS:
 ${JSON.stringify(caseFacts)}
@@ -199,31 +199,32 @@ Use these case facts as the current case memory.
 If the user provides new information, update the case accordingly.
 If the user corrects an existing fact, use the latest correction.
 Do not invent any missing facts.
-`
-    }
-);responseMimeType: "application/json",
-responseSchema: {
-    type: "object",
-    properties: {
-        text: {
-            type: "string"
-        },
-        caseFacts: {
-            type: "object",
-            additionalProperties: {
-                type: "string"
+`,
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: "object",
+                    properties: {
+                        text: {
+                            type: "string"
+                        },
+                        caseFacts: {
+                            type: "object",
+                            additionalProperties: {
+                                type: "string"
+                            }
+                        }
+                    },
+                    required: ["text", "caseFacts"]
+                }
             }
-        }
-    },
-    required: ["text", "caseFacts"]
-         }
+        );
 
         const result = JSON.parse(response.text);
 
-res.json({
-    text: result.text,
-    caseFacts: result.caseFacts
-});
+        res.json({
+            text: result.text,
+            caseFacts: result.caseFacts
+        });
 
     } catch (error) {
         console.error('Chat API Error:', error);
