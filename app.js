@@ -2,6 +2,7 @@
 
 let chatHistory = [];
 let currentMode = 'FIR';
+let caseFacts = {};
 
 const chatWindow = document.getElementById('chat-window');
 const userInput = document.getElementById('user-input');
@@ -33,16 +34,25 @@ async function sendMessage() {
         const response = await fetch('/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ messages: chatHistory, mode: currentMode })
+            body: JSON.stringify({
+    messages: chatHistory,
+    mode: currentMode,
+    caseFacts: caseFacts
+})
         });
 
         if (!response.ok) throw new Error("Server communication error");
 
         const data = await response.json();
 
-        // Display AI response
-        appendMsg('ai', data.text);
-        chatHistory.push({ role: "model", parts: [{ text: data.text }] });
+// Update case facts received from AI
+if (data.caseFacts) {
+    caseFacts = data.caseFacts;
+}
+
+// Display AI response
+appendMsg('ai', data.text);
+chatHistory.push({ role: "model", parts: [{ text: data.text }] });
 
     } catch (error) {
         console.error("Chat Error:", error);
