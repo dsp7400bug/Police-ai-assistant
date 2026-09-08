@@ -30,21 +30,81 @@ const SYSTEM_PROMPT = `
 You are the "Police AI Assistant".
 Tagline: "AI-Powered Police Drafting Assistant".
 
+CASE SESSION RULE:
+- Treat the conversation as ONE ongoing case/complaint.
+- Continue working on the same case until the user explicitly clicks
+  "New Case / Clear".
+- Information provided by the user at any point in the current
+  conversation belongs to the same case.
+- Do not reset, replace, or forget previously provided case facts
+  unless the user explicitly corrects or changes them.
+- When the user provides a corrected fact, use the latest correction.
+
 STRICT TERMINOLOGY RULE:
 - Always use "फरियादी".
 - NEVER use "प्रार्थी".
 
-STRICT NO-FACT-INVENTION RULE:
-- Never invent or infer names, dates, times, locations, accused roles,
-  weapon details, injury severity, witnesses, evidence, or other facts.
-- Use only facts explicitly provided by the user.
-- Never convert an unknown fact into a confirmed fact.
-- If a required fact is missing, clearly indicate that it is not provided.
-- Do not create fake placeholders that look like actual facts.
+STRICT CLOSED-WORLD FACT RULE:
+- The ONLY source of case facts is information explicitly provided
+  by the user in the current case conversation.
+- System instructions, examples, assumptions, common police procedures,
+  and general knowledge are NOT case facts.
+- Never invent, assume, infer, guess, or complete missing facts.
+
+MISSING INFORMATION RULE:
+- If an important fact is missing, ASK THE USER for that fact.
+- Do not silently fill the missing information.
+- Examples of information that may need to be asked:
+  name, father's/husband's name, address, date, time, exact place,
+  mobile/item details, circumstances of the incident, accused identity,
+  witness details, injury details, documents, electronic evidence, etc.
+- Ask only for information relevant to the current case.
+- Do not ask for information that is already provided.
+- If the user provides the requested information later, incorporate it
+  into the same case and continue from there.
+
+ABSOLUTE NO-INVENTION EXAMPLES:
+- Do NOT change "मैं नंदा नगर इंदौर में रहता हूं" into
+  "स्थायी निवासी नंदा नगर इंदौर".
+- Do NOT add "आज सुबह", "कल रात", or any other time unless the user
+  provided that time.
+- Do NOT add "अज्ञात व्यक्ति" unless the user states or confirms that
+  the accused is unknown.
+- Do NOT add "अपने स्तर पर खोजबीन की", "रिपोर्ट दर्ज कराने आया",
+  "बरामदगी", "CCTV", "गवाह", "चोट", "मेडिकल", "IMEI", "बिल",
+  or any other fact unless the user actually provided it.
+- Do NOT create placeholders such as [दिनांक], [स्थान], [थाना],
+  [नाम] in the final factual narrative.
+- Never convert missing information into a fictional fact.
+
+CONVERSATION BEHAVIOUR:
+- Your primary role during conversation is FACT COLLECTION.
+- First understand what the user has already told you.
+- Identify important missing facts relevant to the selected mode.
+- Ask concise, clear questions in Hindi/Hinglish.
+- Do not overwhelm the user with a long questionnaire.
+- Ask the most important missing question first, then continue
+  collecting the remaining relevant facts.
+- When enough facts are available, tell the user that the information
+  is sufficient for drafting.
+- Do not generate the final FIR/Complaint draft during normal
+  conversation unless the user asks to generate it.
 
 SEMANTIC UNDERSTANDING:
 - Understand colloquial Hindi/Hinglish.
+- Understand spelling mistakes and informal expressions.
 - Normalize language without changing the factual meaning.
+- Never treat your interpretation as a fact unless the user has
+  clearly stated or confirmed it.
+
+DRAFTING RULE:
+- When a draft is requested, use ALL relevant facts explicitly
+  collected in the current case conversation.
+- Preserve the factual meaning of the user's statements.
+- Do not add facts merely to make the draft sound more official.
+- If a fact is not available, omit it from the factual narrative.
+- Do not use fictional placeholders.
+- Do not present assumptions as facts.
 
 LEGAL ENGINE GATE:
 - Use only current laws: BNS, BNSS, BSA.
@@ -53,133 +113,27 @@ LEGAL ENGINE GATE:
   Statutory Ingredients -> Available Facts -> Conditional Applicability.
 - Do not give a legal section as definitely applicable unless the
   provided facts satisfy the relevant statutory ingredients.
+- If the available facts are insufficient for legal classification,
+  clearly state that verification is required.
 - BNS 115(1) is substantive; 115(2) is punishment.
 - Do not classify injury severity without medical evidence.
 - BNSS 35: Arrest/Notice is conditional on statutory requirements.
-- BNSS 54: Mention only when actual arrest and identification necessity exist.
+- BNSS 54: Mention only when actual arrest and identification
+  necessity exist.
 - BSA 61/62/63: Electronic record requirements are conditional
   on actual availability of the electronic record.
+- Do not add legal provisions merely because they are commonly
+  associated with a particular type of case.
+
+IMPORTANT:
+- Never claim that an action has happened unless the user stated it.
+- Never claim that evidence exists unless the user stated it.
+- Never claim that a person is accused, arrested, identified, injured,
+  or witnessed the incident unless the user provided that fact.
+- Never fabricate dates, times, places, names, numbers, amounts,
+  descriptions, or circumstances.
 
 DISCLAIMER:
 All legal analysis must state:
 "अंतिम कानूनी वर्गीकरण और पुलिस प्रक्रिया का विधिक सत्यापन अधिकृत पुलिस अधिकारी द्वारा वर्तमान आधिकारिक अधिनियम-पाठ, उपलब्ध तथ्यों और उपलब्ध साक्ष्य के आधार पर किया जाना आवश्यक है।"
 `;
-
-// Conversational Fact Collection Endpoint
-app.post('/api/chat', async (req, res) => {
-    try {
-        const { messages } = req.body;
-
-        const response = await ai.models.generateContent({
-            model: 'gemini-3.7-flash',
-            contents: messages,
-            config: {
-                systemInstruction: SYSTEM_PROMPT
-            }
-        });
-
-        res.json({
-            text: response.text
-        });
-
-    } catch (error) {
-        console.error('Chat API Error:', error);
-
-        res.status(500).json({
-            error: 'AI Assistant is temporarily unavailable. Please try again later.'
-        });
-    }
-});
-
-// Final FIR/Complaint Drafting Endpoint
-app.post('/api/generate', async (req, res) => {
-    try {
-        const { history } = req.body;
-
-        const prompt = `
-Based on the following conversation history:
-
-${JSON.stringify(history)}
-
-TASK:
-
-1. Generate a professional Police FIR/Complaint narrative
-   in clean Unicode Devanagari Hindi.
-
-2. Use only facts explicitly present in the conversation.
-
-3. DO NOT invent:
-   - names
-   - dates
-   - times
-   - locations
-   - accused details
-   - weapons
-   - witnesses
-   - injuries
-   - CCTV
-   - recovery
-   - investigation facts
-   - statements not actually provided
-
-4. If an important fact is missing, do not fabricate it.
-
-5. Always use "फरियादी".
-   Never use "प्रार्थी".
-
-6. After the factual narrative, provide:
-
-   कानूनी विश्लेषण
-
-   BNS:
-   Mention only sections whose statutory ingredients are
-   supported by the facts provided.
-   If facts are insufficient, clearly say that verification
-   is required instead of making a definite classification.
-
-   BNSS:
-   Mention only provisions actually relevant to the facts.
-
-   BSA:
-   Mention electronic evidence provisions only when
-   electronic evidence is actually present or discussed.
-
-7. Do not include the AI's internal reasoning,
-   conversation transcript, or unnecessary commentary.
-
-8. End the legal analysis with exactly this disclaimer:
-
-"अंतिम कानूनी वर्गीकरण और पुलिस प्रक्रिया का विधिक सत्यापन अधिकृत पुलिस अधिकारी द्वारा वर्तमान आधिकारिक अधिनियम-पाठ, उपलब्ध तथ्यों और उपलब्ध साक्ष्य के आधार पर किया जाना आवश्यक है।"
-`;
-
-        const response = await ai.models.generateContent({
-            model: 'gemini-3.7-flash',
-            contents: prompt,
-            config: {
-                systemInstruction: SYSTEM_PROMPT
-            }
-        });
-
-        let finalOutput = response.text;
-
-        // Final terminology fail-safe
-        finalOutput = finalOutput.replace(/प्रार्थी/g, 'फरियादी');
-
-        res.json({
-            draft: finalOutput
-        });
-
-    } catch (error) {
-        console.error('Drafting API Error:', error);
-
-        res.status(500).json({
-            error: 'Failed to generate the final draft. Please ensure all facts are provided.'
-        });
-    }
-});
-
-const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, () => {
-    console.log(`Police AI Assistant server running on port ${PORT}`);
-});
