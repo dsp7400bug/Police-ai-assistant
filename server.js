@@ -24,7 +24,53 @@ app.get('/app.js', (req, res) => {
 const ai = new GoogleGenAI({
     apiKey: process.env.GEMINI_API_KEY
 });
+async function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
 
+async function generateWithFallback(contents, config) {
+    const models = [
+        'gemini-3.7-flash',
+        'gemini-3.6-flash',
+        'gemini-3.5-flash-lite'
+    ];
+
+    let lastError;
+
+    for (const model of models) {
+        for (let attempt = 0; attempt < 2; attempt++) {
+            try {
+                console.log(`Trying model: ${model}, attempt: ${attempt + 1}`);
+
+                return await ai.models.generateContent({
+                    model: model,
+                    contents: contents,
+                    config: config
+                });
+
+            } catch (error) {
+                lastError = error;
+
+                const message = String(error?.message || error);
+
+                if (
+    message.includes('503') ||
+    message.includes('UNAVAILABLE')
+) {
+                    const delay = 2000 * Math.pow(2, attempt);
+                    console.log(`Temporary Gemini error. Retrying in ${delay}ms...`);
+                    await sleep(delay);
+                } else {
+                    throw error;
+                }
+            }
+        }
+
+        console.log(`Model ${model} unavailable. Trying fallback model...`);
+    }
+
+    throw lastError;
+}
 // Centralized System Instructions
 const SYSTEM_PROMPT = `
 You are the "Police AI Assistant".
@@ -141,13 +187,12 @@ app.post('/api/chat', async (req, res) => {
     try {
         const { messages } = req.body;
 
-        const response = await ai.models.generateContent({
-            model: 'gemini-3.7-flash',
-            contents: messages,
-            config: {
-                systemInstruction: SYSTEM_PROMPT
-            }
-        });
+        const response = await generateWithFallback(
+    messages,
+    {
+        systemInstruction: SYSTEM_PROMPT
+    }
+);
 
         res.json({
             text: response.text
@@ -251,13 +296,12 @@ STRICT INSTRUCTIONS:
 "अंतिम कानूनी वर्गीकरण और पुलिस प्रक्रिया का विधिक सत्यापन अधिकृत पुलिस अधिकारी द्वारा वर्तमान आधिकारिक अधिनियम-पाठ, उपलब्ध तथ्यों और उपलब्ध साक्ष्य के आधार पर किया जाना आवश्यक है।"
 `;
 
-        const response = await ai.models.generateContent({
-            model: 'gemini-3.7-flash',
-            contents: prompt,
-            config: {
-                systemInstruction: SYSTEM_PROMPT
-            }
-        });
+        const response = await generateWithFallback(
+    prompt,
+    {
+        systemInstruction: SYSTEM_PROMPT
+    }
+);
 
         let finalOutput = response.text;
 
